@@ -1,6 +1,8 @@
 // STATE
 const state = { points: 0, completed: [], currentQuest: null, timers: {} };
 
+// ── No API key needed here — key is stored safely in Netlify environment variables ──
+
 // NAV
 function navigate(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -138,17 +140,18 @@ function renderQuiz(q, body) {
   body.appendChild(wrap);
 }
 
+// AR QUIZ — real camera + Gemini Vision
 function renderARQuiz(q, body) {
   const ar = document.createElement('div');
   ar.innerHTML = `
     <div class="ar-frame" id="ar-frame">
       <div class="ar-viewfinder" id="ar-viewfinder">
-        <div class="scan-line" id="scan-line"></div>
-        <div class="ar-scan-text" id="ar-scan-text">📷 Scanning zellige pattern...</div>
+        <div class="scan-line" id="scan-line" style="display:none"></div>
+        <div class="ar-scan-text" id="ar-scan-text">Point your camera at a zellige or Islamic geometric pattern</div>
       </div>
       <div class="pattern-detected" id="pattern-detected" style="display:none">
-        <div class="pattern-label" id="pattern-label">✓ Pattern Detected: Eight-pointed star (Khatam)</div>
-        <div class="pattern-text" id="pattern-text">Symbolizes the seal of the prophets and cosmic balance.</div>
+        <div class="pattern-label" id="pattern-label"></div>
+        <div class="pattern-text" id="pattern-text"></div>
       </div>
       <button class="ar-scan-btn" id="ar-scan-btn" onclick="openCamera()">📷 Scan a Pattern</button>
       <input type="file" id="ar-camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleCameraCapture(event,${q.id})">
@@ -171,16 +174,18 @@ async function handleCameraCapture(event, questId) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Show scanning state
   const btn = document.getElementById('ar-scan-btn');
   const scanText = document.getElementById('ar-scan-text');
   const scanLine = document.getElementById('scan-line');
+
+  // Show loading state
   if (btn) btn.style.display = 'none';
   if (scanText) scanText.textContent = '🔍 Analysing pattern...';
   if (scanLine) scanLine.style.display = 'block';
 
+
+
   try {
-    // Convert image to base64
     const base64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -190,33 +195,37 @@ async function handleCameraCapture(event, questId) {
 
     const mediaType = file.type || 'image/jpeg';
 
-    // ── Paste your free Gemini API key from https://aistudio.google.com ──
-    const GEMINI_API_KEY = 'AIzaSyA1baHJXjjRvr1L6VlWpm_ddJFU7XNAHW0';
+    if (scanText) scanText.textContent = '🔍 Analysing pattern...';
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mediaType, data: base64 } },
-              { text: `You are a heritage app assistant for Zawia Quest, a gamified tour of Zaoua de Sidi-Assa in Tunisia. A visitor has taken a photo and is trying to scan an Islamic geometric pattern (zellige tilework, arabesque, star motif, geometric tile, or any similar Islamic/Maghrebi decorative pattern). Respond ONLY with a JSON object, no markdown, no extra text: {"detected": true/false, "patternName": "short name of pattern or motif seen", "description": "one sentence on its symbolism or heritage relevance"}. If the image contains any kind of geometric, architectural, decorative, or cultural pattern (even loosely related — walls, tiles, fabric, art, nature patterns), set detected:true and describe it in heritage terms. Only set detected:false if the image is clearly unrelated (a selfie, blank wall, food, etc).` }
-            ]
-          }],
-          generationConfig: { maxOutputTokens: 300, temperature: 0.2 }
-        })
-      }
-    );
+    const res = await fetch('/.netlify/functions/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64, mediaType })
+    });
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const data = await res.json();
+
+    if (data.error) {
+      if (scanLine) scanLine.style.display = 'none';
+      if (scanText) scanText.textContent = '⚠️ API error: ' + data.error;
+      if (btn) { btn.style.display = 'block'; btn.textContent = '📷 Try Again'; }
+      return;
+    }
+
+    const text = data.text || '';
+
+    if (!text) {
+      if (scanLine) scanLine.style.display = 'none';
+      if (scanText) scanText.textContent = '⚠️ No response — try again';
+      if (btn) { btn.style.display = 'block'; btn.textContent = '📷 Try Again'; }
+      return;
+    }
     let result;
     try {
       result = JSON.parse(text.replace(/```json|```/g, '').trim());
     } catch {
-      result = { detected: true, patternName: 'Geometric pattern', description: 'A beautiful decorative motif echoing the sacred geometry of Islamic art.' };
+      // Gemini returned non-JSON — treat as not detected
+      result = { detected: false };
     }
 
     if (result.detected) {
@@ -226,8 +235,10 @@ async function handleCameraCapture(event, questId) {
     }
 
   } catch (err) {
-    // Fallback: show detected anyway so quest isn't blocked
-    showPatternDetected('Geometric Pattern', 'A visual motif connected to the sacred geometry of Islamic heritage.');
+    // Network error — show message, do NOT auto-pass
+    if (scanLine) scanLine.style.display = 'none';
+    if (scanText) scanText.textContent = '⚠️ Network error — check your connection';
+    if (btn) { btn.style.display = 'block'; btn.textContent = '📷 Try Again'; }
   }
 }
 
@@ -254,11 +265,8 @@ function showPatternDetected(patternName, description) {
 
 function showPatternNotFound(btn, scanText, scanLine) {
   if (scanLine) scanLine.style.display = 'none';
-  if (scanText) scanText.textContent = '❌ No pattern found — try again';
-  if (btn) {
-    btn.style.display = 'block';
-    btn.textContent = '📷 Try Again';
-  }
+  if (scanText) scanText.textContent = '❌ No Islamic pattern detected — try again';
+  if (btn) { btn.style.display = 'block'; btn.textContent = '📷 Try Again'; }
 }
 
 function renderAudioQuiz(q, body) {
@@ -447,9 +455,6 @@ function showQuestResult(questId, correct) {
   }
 
   const body = document.getElementById('quest-body-area');
-  const existing = body.querySelector('.reward-box, .quiz-opts, .drag-source, .puzzle-grid, .tl-container, .check-btn, .ar-frame, .audio-card');
-  
-  // Clear quest content, keep timer and obj
   const children = [...body.children];
   children.forEach(c => {
     if (!c.classList.contains('timer-strip') && !c.classList.contains('quest-obj')) c.remove();
@@ -492,12 +497,13 @@ function renderAchievements() {
   });
 }
 
-// LIBRARY
+// LIBRARY — cards are clickable links
 function renderLibrary(tab) {
   const content = document.getElementById('lib-content');
   content.innerHTML = '';
   (LIBRARY[tab] || []).forEach(item => {
-    content.innerHTML += `<div class="lib-card">
+    const href = item.url ? `href="${item.url}" target="_blank" rel="noopener noreferrer"` : '';
+    content.innerHTML += `<a class="lib-card" ${href} style="text-decoration:none;color:inherit;display:flex;cursor:pointer;">
       <div class="lib-card-img">${item.icon}</div>
       <div class="lib-card-body">
         <div class="lib-tag">${item.tag}</div>
@@ -508,7 +514,7 @@ function renderLibrary(tab) {
           <span class="lib-read-btn">READ MORE →</span>
         </div>
       </div>
-    </div>`;
+    </a>`;
   });
 }
 
