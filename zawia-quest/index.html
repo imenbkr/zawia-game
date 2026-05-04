@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#2C1810" />
+  <title>Zawia Quest — Zaoua de Sidi-Assa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- SCREEN: Onboarding -->
+    <div class="screen active" id="screen-onboarding">
+      <div class="onboarding-bg">
+        <div class="geo-pattern"></div>
+        <div class="onboarding-content">
+          <div class="mosque-icon">🕌</div>
+          <div class="elder-quote">"This place has been waiting<br>for someone like you."</div>
+          <h1 class="app-title">Zawia Quest</h1>
+          <p class="app-subtitle">Zaoua de Sidi-Assa · Tbourba, Tunisia</p>
+          <p class="onboarding-body">Walk through four centuries of heritage. Unlock sacred knowledge. Become the Guardian of Memory.</p>
+          <button class="btn-primary" onclick="navigate('screen-home')">Begin Your Quest ✦</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN: Home / Quest Map -->
+    <div class="screen" id="screen-home">
+      <div class="top-bar">
+        <div class="app-name">Zawia Quest</div>
+        <div class="kp-badge"><span id="home-pts">0</span> KP</div>
+      </div>
+      <div class="home-hero">
+        <div class="hero-text">
+          <div class="hero-title">Zaoua Quest</div>
+          <div class="hero-sub">Zaoua de Sidi-Assa · Tbourba, Tunisia</div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-label-row"><span>Quest Progress</span><span id="pct">0%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="main-fill" style="width:0%"></div></div>
+          <div class="progress-label-row" style="margin-top:4px"><span id="quests-done">0 / 5 quests</span></div>
+        </div>
+      </div>
+      <div class="section-label">Your Quest Map</div>
+      <div class="quest-list" id="quest-list"></div>
+      <div class="section-label" style="margin-top:24px">Earned Badges</div>
+      <div class="badge-row" id="badge-row-home"></div>
+    </div>
+
+    <!-- SCREEN: Quest Detail -->
+    <div class="screen" id="screen-detail">
+      <div class="back-btn" onclick="navigate('screen-home')">← Back</div>
+      <div class="detail-header" id="detail-header"></div>
+      <div class="detail-body" id="detail-body"></div>
+    </div>
+
+    <!-- SCREEN: Quest Active -->
+    <div class="screen" id="screen-quest">
+      <div class="back-btn" onclick="navigate('screen-home')">← Map</div>
+      <div class="quest-header-bar" id="quest-header-bar"></div>
+      <div class="quest-body-area" id="quest-body-area"></div>
+    </div>
+
+    <!-- SCREEN: Achievements -->
+    <div class="screen" id="screen-achievements">
+      <div class="back-btn" onclick="navigate('screen-home')">← Back</div>
+      <div class="ach-header">Your Achievements</div>
+      <div class="kp-total-display"><span id="ach-pts">0</span> Knowledge Points</div>
+      <div class="badges-grid" id="badges-grid"></div>
+    </div>
+
+    <!-- SCREEN: Library -->
+    <div class="screen" id="screen-library">
+      <div class="back-btn" onclick="navigate('screen-home')">← Back</div>
+      <div class="lib-header">Library</div>
+      <div class="lib-tabs">
+        <button class="lib-tab active" onclick="switchTab(this,'history')">History</button>
+        <button class="lib-tab" onclick="switchTab(this,'architecture')">Architecture</button>
+        <button class="lib-tab" onclick="switchTab(this,'sufism')">Sufism</button>
+      </div>
+      <div class="lib-content" id="lib-content"></div>
+    </div>
+
+    <!-- SCREEN: Profile -->
+    <div class="screen" id="screen-profile">
+      <div class="back-btn" onclick="navigate('screen-home')">← Back</div>
+      <div class="profile-card">
+        <div class="avatar">HG</div>
+        <div class="profile-name">Heritage Guardian</div>
+        <div class="profile-level">Master Seeker · Level 5</div>
+        <div class="profile-kp" id="profile-kp">0 KP</div>
+      </div>
+      <div class="section-label">Journey Milestones</div>
+      <div class="milestones-list" id="milestones-list"></div>
+    </div>
+
+    <!-- SCREEN: Final Celebration -->
+    <div class="screen" id="screen-final">
+      <div class="final-wrap">
+        <div class="final-checkmark">✦</div>
+        <div class="final-title">Heritage Guardian<br>of Tbourba</div>
+        <div class="final-badges" id="final-badges"></div>
+        <div class="final-quote">"The mosque guided the mind.<br>The Zaoua guided the soul.<br>Now you carry both."</div>
+        <div class="final-kp">1000 Knowledge Points Earned</div>
+        <button class="btn-primary" onclick="resetGame()">Explore Again ↩</button>
+        <button class="btn-secondary" onclick="navigate('screen-home')">Return to Map</button>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-btn" onclick="navigate('screen-home')">
+        <span>🗺</span><span>Quests</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('screen-achievements')">
+        <span>🏅</span><span>Badges</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('screen-library')">
+        <span>📚</span><span>Library</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('screen-profile')">
+        <span>👤</span><span>Profile</span>
+      </button>
+    </nav>
+
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
